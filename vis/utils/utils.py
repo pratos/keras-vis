@@ -228,7 +228,7 @@ def get_img_shape(img):
     else:
         shape = K.int_shape(img)
 
-    if K.image_data_format() == 'channels_last':
+    if K.image_dim_ordering() == 'th':
         shape = list(shape)
         shape.insert(1, shape[-1])
         shape = tuple(shape[:-1])

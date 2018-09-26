@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import numpy as np
 from scipy.ndimage.interpolation import zoom
 
-from keras.layers.convolutional import _Conv
+from keras.layers.convolutional import Conv2D
 from keras.layers.pooling import _Pooling1D, _Pooling2D, _Pooling3D
 from keras.layers.wrappers import Wrapper
 from keras import backend as K
@@ -30,7 +30,7 @@ def _find_penultimate_layer(model, layer_idx, penultimate_layer_idx):
         for idx, layer in utils.reverse_enumerate(model.layers[:layer_idx - 1]):
             if isinstance(layer, Wrapper):
                 layer = layer.layer
-            if isinstance(layer, (_Conv, _Pooling1D, _Pooling2D, _Pooling3D)):
+            if isinstance(layer, (Conv2D, _Pooling1D, _Pooling2D, _Pooling3D)):
                 penultimate_layer_idx = idx
                 break
 
@@ -79,7 +79,7 @@ def visualize_saliency_with_losses(input_tensor, losses, seed_input, wrt_tensor=
     grads = opt.minimize(seed_input=seed_input, max_iter=1, grad_modifier=grad_modifier, verbose=False)[1]
 
     if not keepdims:
-        channel_idx = 1 if K.image_data_format() == 'channels_first' else -1
+        channel_idx = 1 if K.image_dim_ordering() == 'tf' else -1
         grads = np.max(grads, axis=channel_idx)
     return utils.normalize(grads)[0]
 
@@ -171,7 +171,7 @@ def visualize_cam_with_losses(input_tensor, losses, seed_input, penultimate_laye
 
     # Average pooling across all feature maps.
     # This captures the importance of feature map (channel) idx to the output.
-    channel_idx = 1 if K.image_data_format() == 'channels_first' else -1
+    channel_idx = 1 if K.image_dim_ordering() == 'tf' else -1
     other_axis = np.delete(np.arange(len(grads.shape)), channel_idx)
     weights = np.mean(grads, axis=tuple(other_axis))
 
@@ -182,6 +182,7 @@ def visualize_cam_with_losses(input_tensor, losses, seed_input, penultimate_laye
         if channel_idx == -1:
             heatmap += w * penultimate_output_value[0, ..., i]
         else:
+            # print(w, utils.get_img_shape(penultimate_output), penultimate_output_value[0, i, ...].shape, heatmap.shape)
             heatmap += w * penultimate_output_value[0, i, ...]
 
     # ReLU thresholding to exclude pattern mismatch information (negative gradients).
